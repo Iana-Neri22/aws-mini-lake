@@ -10,11 +10,7 @@ The goal is to demonstrate serverless data engineering patterns, infrastructure 
 
 ## 🏗️ Architecture
 
-CSV → S3 (raw)
-↓
-Lambda (Pandas)
-↓
-S3 (curated - partitioned by date)
+![Event-Driven Data Lake Architecture](architecture/event-driven-mini-lake.png)
 
 
 ---
