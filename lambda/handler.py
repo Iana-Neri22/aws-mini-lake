@@ -7,8 +7,10 @@ s3 = boto3.client("s3", endpoint_url="http://localstack:4566")
 
 def lambda_handler(event, context):
 
-    bucket = event["bucket"]
-    key = event["key"]
+    record = event["Records"][0]
+    bucket = record["s3"]["bucket"]["name"]
+    key = record["s3"]["object"]["key"]
+
 
     # Lê CSV do S3
     response = s3.get_object(Bucket=bucket, Key=key)
