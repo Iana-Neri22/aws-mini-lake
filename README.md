@@ -29,6 +29,7 @@ The goal is to demonstrate serverless data engineering patterns, infrastructure 
 
 ## ⚙️ Setup Instructions
 
+
 ### 1️⃣ Start LocalStack
 
 ```bash
@@ -59,7 +60,7 @@ docker run --rm -v "$PWD/package":/var/task \
   pip install pandas -t /var/task
 ```
 
-Copy handler:
+Copy the Lambda handler:
 
 ```bash
 cp lambda/handler.py package/
@@ -99,33 +100,45 @@ aws --endpoint-url=http://localhost:4566 lambda create-function \
   --role arn:aws:iam::000000000000:role/lambda-role
   ```
 
-Verify:
+If you need to update the Lambda Function
+
+```bash
+aws --endpoint-url=http://localhost:4566 lambda update-function-code \
+  --function-name process-transactions \
+  --zip-file fileb://function.zip
+```
+
+Verify the Lambda:
 
 ```bash
 aws --endpoint-url=http://localhost:4566 lambda list-functions
 ```
 
-6️⃣ Upload Sample File (Raw Layer)
+6️⃣ Configure S3 Trigger (Event-Driven Execution)
+
+```bash
+aws --endpoint-url=http://localhost:4566 lambda add-permission \
+  --function-name process-transactions \
+  --statement-id s3-trigger \
+  --action lambda:InvokeFunction \
+  --principal s3.amazonaws.com \
+  --source-arn arn:aws:s3:::raw-transactions
+```
+
+Configure bucket notification (using notification.json):
+
+```bash
+aws --endpoint-url=http://localhost:4566 s3api put-bucket-notification-configuration \
+  --bucket raw-transactions \
+  --notification-configuration file://notification.json
+```
+
+7️⃣ Upload Sample File (Raw Layer)
+
+Trigger the pipeline automatically:
 
 ```bash
 aws --endpoint-url=http://localhost:4566 s3 cp sample_data/transactions.csv s3://raw-transactions/
-```
-
-7️⃣ Invoke Lambda Manually
-
-```bash
-aws --endpoint-url=http://localhost:4566 lambda invoke \
-  --function-name process-transactions \
-  --cli-binary-format raw-in-base64-out \
-  --payload file://event.json \
-  response.json \
-  --no-cli-pager
-```
-
-Check response:
-
-```bash
-cat response.json
 ```
 
 8️⃣ Validate Curated Output
@@ -158,14 +171,41 @@ Trade-offs between Parquet support and Lambda constraints
 
 ## 🚀 Future Improvements
 
-Automate S3 trigger instead of manual invocation
+### 1️⃣ Infrastructure as Code (Terraform)
 
-Infrastructure as Code with Terraform
+Provision S3 buckets, Lambda function, IAM roles, and S3 notifications using Terraform to eliminate manual setup and enable reproducible environments.
 
-Add Athena table for querying curated layer
+---
 
-Implement Lambda Layers
+### 2️⃣ Athena Integration (Analytics Layer)
 
-Container-based Lambda version
+Create an external table in Amazon Athena pointing to the curated layer, enabling SQL-based analytics over partitioned data.
 
-Add CI/CD pipeline
+---
+
+### 3️⃣ Add a Trusted Layer
+
+Introduce a trusted data layer with schema validation and data quality checks before publishing curated datasets.
+
+---
+
+### 4️⃣ Container-Based Lambda Version
+
+Implement a container-based Lambda to remove packaging limitations and enable Parquet support using PyArrow.
+
+---
+
+### 5️⃣ Observability & Monitoring
+
+- Structured logging
+- CloudWatch metrics simulation
+- Dead-letter queue (DLQ) for failure handling
+
+---
+
+### 6️⃣ CI/CD Pipeline
+
+Automate build and deployment using GitHub Actions, including:
+- Dependency packaging
+- Lambda deployment
+- Automated tests
