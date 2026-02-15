@@ -36,6 +36,95 @@ The goal is to demonstrate serverless data engineering patterns, infrastructure 
 docker-compose up -d
 ```
 
+### 2️⃣ Package Lambda (Required Before Terraform Apply)
+
+```bash
+rm -rf package function.zip
+mkdir package
+```
+
+Install pandas using AWS-compatible build image:
+
+```bash
+docker run --rm -v "$PWD/package":/var/task \
+  public.ecr.aws/sam/build-python3.9 \
+  pip install pandas -t /var/task
+```
+
+Copy the Lambda handler:
+
+```bash
+cp lambda/handler.py package/
+```
+
+Zip contents:
+
+```bash
+cd package
+zip -r ../function.zip .
+cd ..
+```
+
+### 3️⃣ Provision Infrastructure with Terraform
+
+Navigate to infrastructure folder:
+
+```bash
+cd infrastructure
+```
+
+Initialize Terraform:
+
+```bash
+terraform init
+```
+
+Review execution plan:
+
+```bash
+terraform plan
+```
+
+Apply infrastructure:
+
+```bash
+terraform apply
+```
+
+This will provision:
+
+- S3 raw bucket
+
+- S3 curated bucket
+
+- IAM role
+
+- Lambda function
+
+- Lambda permission
+
+- S3 bucket notification (event trigger)
+
+### 4️⃣ Trigger the Pipeline
+
+Upload sample file to raw bucket:
+
+```bash
+aws --endpoint-url=http://localhost:4566 s3 cp ../sample_data/transactions.csv s3://raw-transactions/
+```
+
+### 5️⃣ Validate Curated Output
+
+```bash
+aws --endpoint-url=http://localhost:4566 s3 ls s3://curated-transactions/ --recursive
+```
+
+You should see partitioned output like:
+
+```bash
+dt_reference=YYYY-MM-DD/transactions.csv
+```
+
 2️⃣ Create S3 Buckets
 
 ```bash
