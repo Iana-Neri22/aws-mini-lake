@@ -73,6 +73,10 @@ Navigate to infrastructure folder:
 cd infrastructure
 ```
 
+```bash
+cd local
+```
+
 Initialize Terraform:
 
 ```bash

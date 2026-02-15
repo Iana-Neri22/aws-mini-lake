@@ -25,10 +25,6 @@ resource "aws_glue_catalog_table" "transactions" {
   database_name = aws_glue_catalog_database.analytics.name
   table_type    = "EXTERNAL_TABLE"
 
-  parameters = {
-    classification = "csv"
-  }
-
   storage_descriptor {
     location      = "s3://${aws_s3_bucket.curated.bucket}/"
     input_format  = "org.apache.hadoop.mapred.TextInputFormat"
@@ -53,7 +49,7 @@ resource "aws_glue_catalog_table" "transactions" {
 
     columns {
       name = "amount"
-      type = "string"
+      type = "double"
     }
 
     columns {
@@ -66,4 +62,9 @@ resource "aws_glue_catalog_table" "transactions" {
     name = "dt_reference"
     type = "string"
   }
+
+  parameters = {
+    "skip.header.line.count" = "1"
+  }
 }
+

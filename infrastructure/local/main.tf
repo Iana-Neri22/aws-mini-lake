@@ -41,14 +41,22 @@ resource "aws_iam_role" "lambda_role" {
   })
 }
 
+data "archive_file" "lambda_zip" {
+  type        = "zip"
+  source_dir  = "${path.module}/../../lambda"
+  output_path = "${path.module}/lambda.zip"
+}
+
 resource "aws_lambda_function" "process_transactions" {
   function_name = "process-transactions"
   role          = aws_iam_role.lambda_role.arn
   handler       = "handler.lambda_handler"
   runtime       = "python3.9"
 
-  filename         = "../function.zip"
-  source_code_hash = filebase64sha256("../function.zip")
+  filename         = data.archive_file.lambda_zip.output_path
+  source_code_hash = data.archive_file.lambda_zip.output_base64sha256
+
+  depends_on = [data.archive_file.lambda_zip]
 }
 
 resource "aws_lambda_permission" "allow_s3" {
@@ -74,67 +82,3 @@ resource "aws_s3_bucket" "athena_results" {
   bucket        = "athena-query-results"
   force_destroy = true
 }
-
-resource "aws_glue_catalog_database" "analytics" {
-  name = "mini_lake_db"
-}
-
-resource "aws_glue_catalog_table" "transactions" {
-  name          = "transactions"
-  database_name = aws_glue_catalog_database.analytics.name
-  table_type    = "EXTERNAL_TABLE"
-
-  parameters = {
-    "classification" = "csv"
-  }
-
-  storage_descriptor {
-    location      = "s3://${aws_s3_bucket.curated.bucket}/"
-    input_format  = "org.apache.hadoop.mapred.TextInputFormat"
-    output_format = "org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat"
-
-    ser_de_info {
-      serialization_library = "org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe"
-
-      parameters = {
-        "field.delim" = ","
-      }
-    }
-
-    columns {
-      name = "transaction_id"
-      type = "string"
-    }
-
-    columns {
-      name = "customer_id"
-      type = "string"
-    }
-
-    columns {
-      name = "amount"
-      type = "string"
-    }
-
-    columns {
-      name = "processed_at"
-      type = "string"
-    }
-  }
-
-  partition_keys {
-    name = "dt_reference"
-    type = "string"
-  }
-}
-
-resource "aws_athena_workgroup" "mini_lake" {
-  name = "mini-lake-workgroup"
-
-  configuration {
-    result_configuration {
-      output_location = "s3://${aws_s3_bucket.athena_results.bucket}/"
-    }
-  }
-}
-
