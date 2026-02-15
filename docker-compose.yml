@@ -7,7 +7,7 @@ services:
     ports:
       - "4566:4566"
     environment:
-      - SERVICES=s3,lambda,iam
+      - SERVICES=s3,lambda,iam,athena,glue
       - DEBUG=1
       - DATA_DIR=/tmp/localstack/data
     volumes:
