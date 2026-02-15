@@ -125,120 +125,6 @@ You should see partitioned output like:
 dt_reference=YYYY-MM-DD/transactions.csv
 ```
 
-2️⃣ Create S3 Buckets
-
-```bash
-aws --endpoint-url=http://localhost:4566 s3 mb s3://raw-transactions
-aws --endpoint-url=http://localhost:4566 s3 mb s3://curated-transactions
-```
-
-3️⃣ Package Lambda with Pandas (Lambda-Compatible Build)
-
-Clean previous builds:
-
-```bash
-rm -rf package function.zip
-mkdir package
-```
-
-Install pandas using AWS-compatible build image:
-
-```bash
-docker run --rm -v "$PWD/package":/var/task \
-  public.ecr.aws/sam/build-python3.9 \
-  pip install pandas -t /var/task
-```
-
-Copy the Lambda handler:
-
-```bash
-cp lambda/handler.py package/
-```
-
-Zip contents (from inside package directory):
-
-```bash
-cd package
-zip -r ../function.zip .
-cd ..
-```
-
-4️⃣ Create IAM Role (LocalStack)
-
-```bash
-aws --endpoint-url=http://localhost:4566 iam create-role \
-  --role-name lambda-role \
-  --assume-role-policy-document '{
-    "Version": "2012-10-17",
-    "Statement": [{
-      "Effect": "Allow",
-      "Principal": {"Service": "lambda.amazonaws.com"},
-      "Action": "sts:AssumeRole"
-    }]
-  }'
-```
-
-5️⃣ Create Lambda Function
-
-```bash
-aws --endpoint-url=http://localhost:4566 lambda create-function \
-  --function-name process-transactions \
-  --runtime python3.9 \
-  --handler handler.lambda_handler \
-  --zip-file fileb://function.zip \
-  --role arn:aws:iam::000000000000:role/lambda-role
-  ```
-
-If you need to update the Lambda Function
-
-```bash
-aws --endpoint-url=http://localhost:4566 lambda update-function-code \
-  --function-name process-transactions \
-  --zip-file fileb://function.zip
-```
-
-Verify the Lambda:
-
-```bash
-aws --endpoint-url=http://localhost:4566 lambda list-functions
-```
-
-6️⃣ Configure S3 Trigger (Event-Driven Execution)
-
-```bash
-aws --endpoint-url=http://localhost:4566 lambda add-permission \
-  --function-name process-transactions \
-  --statement-id s3-trigger \
-  --action lambda:InvokeFunction \
-  --principal s3.amazonaws.com \
-  --source-arn arn:aws:s3:::raw-transactions
-```
-
-Configure bucket notification (using notification.json):
-
-```bash
-aws --endpoint-url=http://localhost:4566 s3api put-bucket-notification-configuration \
-  --bucket raw-transactions \
-  --notification-configuration file://notification.json
-```
-
-7️⃣ Upload Sample File (Raw Layer)
-
-Trigger the pipeline automatically:
-
-```bash
-aws --endpoint-url=http://localhost:4566 s3 cp sample_data/transactions.csv s3://raw-transactions/
-```
-
-8️⃣ Validate Curated Output
-
-```bash
-aws --endpoint-url=http://localhost:4566 s3 ls s3://curated-transactions/ --recursive
-```
-
-You should see partitioned output like:
-
-dt_reference=YYYY-MM-DD/transactions.csv
 
 ---
 
@@ -260,41 +146,51 @@ Trade-offs between Parquet support and Lambda constraints
 
 ## 🚀 Future Improvements
 
-### 1️⃣ Infrastructure as Code (Terraform)
+### 1️⃣ Analytics Layer (Athena Integration)
 
-Provision S3 buckets, Lambda function, IAM roles, and S3 notifications using Terraform to eliminate manual setup and enable reproducible environments.
-
----
-
-### 2️⃣ Athena Integration (Analytics Layer)
-
-Create an external table in Amazon Athena pointing to the curated layer, enabling SQL-based analytics over partitioned data.
+Create an external table in Amazon Athena pointing to the curated layer, enabling SQL-based analytics over partitioned datasets.
 
 ---
 
-### 3️⃣ Add a Trusted Layer
+### 2️⃣ Trusted Data Layer
 
-Introduce a trusted data layer with schema validation and data quality checks before publishing curated datasets.
+Introduce a trusted layer between raw and curated data with:
+
+- Schema enforcement
+- Data validation rules
+- Basic data quality checks
+- Idempotent processing logic
 
 ---
 
-### 4️⃣ Container-Based Lambda Version
+### 3️⃣ Parquet Support via Container-Based Lambda
 
-Implement a container-based Lambda to remove packaging limitations and enable Parquet support using PyArrow.
+Implement a container-based Lambda to overcome ZIP size limitations and enable Parquet output using PyArrow.
 
 ---
 
-### 5️⃣ Observability & Monitoring
+### 4️⃣ Observability & Reliability
+
+Enhance operational visibility and failure handling with:
 
 - Structured logging
 - CloudWatch metrics simulation
-- Dead-letter queue (DLQ) for failure handling
+- Dead-letter queue (DLQ)
+- Retry strategies
 
 ---
 
-### 6️⃣ CI/CD Pipeline
+### 5️⃣ CI/CD Pipeline
 
-Automate build and deployment using GitHub Actions, including:
-- Dependency packaging
-- Lambda deployment
-- Automated tests
+Automate infrastructure and application deployment using GitHub Actions, including:
+
+- Terraform plan/apply
+- Lambda packaging
+- Automated validation tests
+- Environment-based deployment
+
+---
+
+### 6️⃣ Remote Terraform State
+
+Configure a remote backend (e.g., S3) to store Terraform state securely and enable collaborative infrastructure management.
