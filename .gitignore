@@ -21,6 +21,7 @@ override.tf
 override.tf.json
 *_override.tf
 *_override.tf.json
+infrastructure/local/lambda.zip
 
 # Opcional (se quiser ignorar lock file)
 # .terraform.lock.hcl

@@ -73,6 +73,10 @@ Navigate to infrastructure folder:
 cd infrastructure
 ```
 
+```bash
+cd local
+```
+
 Initialize Terraform:
 
 ```bash
@@ -125,6 +129,13 @@ You should see partitioned output like:
 dt_reference=YYYY-MM-DD/transactions.csv
 ```
 
+Subir um arquivo para o bucket curated real
+
+```bash
+aws s3 cp \
+sample_data/transactions.csv \
+s3://mini-lake-curated-iana-neri-2026/dt_reference=2026-02-15/
+```
 
 ---
 

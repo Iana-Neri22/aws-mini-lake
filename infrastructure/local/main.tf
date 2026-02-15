@@ -8,12 +8,13 @@ provider "aws" {
   skip_requesting_account_id  = true
 
   endpoints {
-    s3     = "http://localhost:4566"
-    lambda = "http://localhost:4566"
-    iam    = "http://localhost:4566"
+    s3      = "http://localhost:4566"
+    lambda  = "http://localhost:4566"
+    iam     = "http://localhost:4566"
+    glue    = "http://localhost:4566"
+    athena  = "http://localhost:4566"
   }
 }
-
 
 resource "aws_s3_bucket" "raw" {
   bucket = "raw-transactions"
@@ -40,14 +41,22 @@ resource "aws_iam_role" "lambda_role" {
   })
 }
 
+data "archive_file" "lambda_zip" {
+  type        = "zip"
+  source_dir  = "${path.module}/../../lambda"
+  output_path = "${path.module}/lambda.zip"
+}
+
 resource "aws_lambda_function" "process_transactions" {
   function_name = "process-transactions"
   role          = aws_iam_role.lambda_role.arn
   handler       = "handler.lambda_handler"
   runtime       = "python3.9"
 
-  filename         = "../function.zip"
-  source_code_hash = filebase64sha256("../function.zip")
+  filename         = data.archive_file.lambda_zip.output_path
+  source_code_hash = data.archive_file.lambda_zip.output_base64sha256
+
+  depends_on = [data.archive_file.lambda_zip]
 }
 
 resource "aws_lambda_permission" "allow_s3" {
@@ -67,4 +76,9 @@ resource "aws_s3_bucket_notification" "raw_notification" {
   }
 
   depends_on = [aws_lambda_permission.allow_s3]
+}
+
+resource "aws_s3_bucket" "athena_results" {
+  bucket        = "athena-query-results"
+  force_destroy = true
 }
