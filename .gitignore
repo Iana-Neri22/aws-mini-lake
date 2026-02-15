@@ -1,18 +1,43 @@
+# ==============================
 # Build artifacts
+# ==============================
 package/
 function.zip
 
+# ==============================
 # Python
+# ==============================
 __pycache__/
 *.pyc
 
+# ==============================
+# Terraform
+# ==============================
+.terraform/
+*.tfstate
+*.tfstate.*
+crash.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# Opcional (se quiser ignorar lock file)
+# .terraform.lock.hcl
+
+# ==============================
 # Local test outputs
+# ==============================
 response.json
 
+# ==============================
 # LocalStack
+# ==============================
 localstack/
 localstack/cache/
 
+# ==============================
 # OS
+# ==============================
 .DS_Store
 Thumbs.db
